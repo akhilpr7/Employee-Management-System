@@ -9,7 +9,7 @@ A full-stack Django application with REST API for managing employees via dynamic
 - **Auth**: JWT via `djangorestframework-simplejwt`
 - **DB**: PostgreSQL 15
 - **Frontend**: Bootstrap 5, Axios (AJAX), SortableJS (drag-and-drop)
-- **Container**: Docker + docker-compose
+- **Container**: Docker + docker compose
 
 ---
 
@@ -34,13 +34,13 @@ cd Employee-Management-System/
 ### 2. Build and start
 
 ```bash
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 ### 3. Create a superuser (optional)
 
 ```bash
-docker-compose exec django python manage.py createsuperuser --settings=core.settings.development
+docker compose exec django python manage.py createsuperuser --settings=core.settings.development
 ```
 
 ### 4. Access the app
@@ -109,22 +109,22 @@ The collection auto-saves tokens from Login/Register responses into collection v
 
 ```bash
 # Start all services
-docker-compose up -d
+docker compose up -d
 
 # View logs
-docker-compose logs -f django
+docker compose logs -f django
 
 # Run migrations
-docker-compose exec django python manage.py migrate --settings=core.settings.development
+docker compose exec django python manage.py migrate --settings=core.settings.development
 
 # Shell access
-docker-compose exec django python manage.py shell --settings=core.settings.development
+docker compose exec django python manage.py shell --settings=core.settings.development
 
 # Stop all
-docker-compose down
+docker compose down
 
 # Stop and remove volumes (full reset)
-docker-compose down -v
+docker compose down -v
 ```
 
 ---
