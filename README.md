@@ -28,7 +28,7 @@ A full-stack Django application with REST API for managing employees via dynamic
 
 ```bash
 git clone https://github.com/akhilpr7/Employee-Management-System.git
-cd emp_mgmt
+cd Employee-Management-System/
 ```
 
 ### 2. Build and start
