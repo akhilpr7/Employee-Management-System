@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}{% if employee %}Edit Employee{% else %}New Employee{% endif %}{% endblock %}
+{% block nav_employees %}active{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="d-flex align-items-center mb-4">
+      <h3 class="fw-bold mb-0">
+        <i class="bi bi-person-plus me-2 text-primary"></i>
+        {% if employee %}Edit Employee{% else %}New Employee{% endif %}
+      </h3>
+      <a href="{% url 'employees:list' %}" class="btn btn-outline-secondary btn-sm ms-auto">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-3">
+      <div class="card-body">
+        <label class="form-label fw-semibold">Select Form Template <span class="text-danger">*</span></label>
+        <select id="formTemplateSelect" class="form-select">
+          <option value="">— Choose a template —</option>
+          {% for f in forms %}
+            <option value="{{ f.pk }}" {% if employee and employee.form_template_id == f.pk %}selected{% endif %}>
+              {{ f.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div id="dynamicFields" class="card shadow-sm border-0" style="display:none">
+      <div class="card-header bg-white py-3">
+        <span class="fw-semibold" id="formTemplateName"></span>
+      </div>
+      <div class="card-body" id="fieldsContainer">
+        <!-- Injected dynamically -->
+      </div>
+      <div class="card-footer bg-white d-flex justify-content-end gap-2">
+        <a href="{% url 'employees:list' %}" class="btn btn-outline-secondary">Cancel</a>
+        <button id="saveEmployeeBtn" class="btn btn-success px-4">
+          <i class="bi bi-save me-2"></i>Save Employee
+        </button>
+      </div>
+    </div>
+
+    <div id="noTemplate" class="text-center text-muted py-5">
+      <i class="bi bi-arrow-up-circle" style="font-size:2.5rem"></i>
+      <p class="mt-2">Select a form template to begin.</p>
+    </div>
+    <div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index:9999"></div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+  const EMPLOYEE_ID = {{ employee.pk|default:"null" }};
+  const EXISTING = {{ existing_values|default:"{}"|safe }};
+
+  const select = document.getElementById("formTemplateSelect");
+  const dynamicCard = document.getElementById("dynamicFields");
+  const noTemplate = document.getElementById("noTemplate");
+  const container = document.getElementById("fieldsContainer");
+  const saveBtn = document.getElementById("saveEmployeeBtn");
+
+  function buildInput(field) {
+    const val = EXISTING[String(field.id)] ?? "";
+    const req = field.is_required ? "required" : "";
+    const wrap = document.createElement("div");
+    wrap.className = "mb-3";
+    wrap.innerHTML = `
+      <label class="form-label fw-semibold">
+        ${field.label}${field.is_required ? ' <span class="text-danger">*</span>' : ""}
+      </label>`;
+
+    let input;
+    if (field.field_type === "textarea") {
+      input = document.createElement("textarea");
+      input.className = "form-control";
+      input.rows = 3;
+      input.value = val;
+    } else if (field.field_type === "select") {
+      input = document.createElement("select");
+      input.className = "form-select";
+      input.innerHTML = `<option value="">— Select —</option>` +
+        (field.options ?? []).map(o => `<option value="${o}" ${val === o ? "selected" : ""}>${o}</option>`).join("");
+    } else if (field.field_type === "checkbox") {
+      const div = document.createElement("div");
+      div.className = "form-check";
+      div.innerHTML = `<input class="form-check-input" type="checkbox" id="f${field.id}" ${val === "true" ? "checked" : ""}>
+        <label class="form-check-label" for="f${field.id}">${field.label}</label>`;
+      wrap.appendChild(div);
+      div.querySelector("input").dataset.fieldId = field.id;
+      container.appendChild(wrap);
+      return;
+    } else {
+      input = document.createElement("input");
+      input.type = field.field_type;
+      input.className = "form-control";
+      input.placeholder = field.placeholder || "";
+      input.value = val;
+    }
+    if (req) input.required = true;
+    input.dataset.fieldId = field.id;
+    wrap.appendChild(input);
+    container.appendChild(wrap);
+  }
+
+  async function loadFields(formId, name) {
+    container.innerHTML = `<div class="text-center py-3"><div class="spinner-border text-primary"></div></div>`;
+    dynamicCard.style.display = "";
+    noTemplate.style.display = "none";
+    document.getElementById("formTemplateName").textContent = name;
+    try {
+      const res = await axios.get(`/employees/forms/${formId}/fields/`);
+      container.innerHTML = "";
+      res.data.fields.forEach(buildInput);
+      if (!res.data.fields.length) {
+        container.innerHTML = `<p class="text-muted">This template has no fields yet. <a href="/employees/forms/${formId}/edit/">Edit it</a>.</p>`;
+      }
+    } catch (e) {
+      container.innerHTML = `<p class="text-danger">Failed to load fields.</p>`;
+    }
+  }
+
+  select.addEventListener("change", () => {
+    const id = select.value;
+    if (!id) { dynamicCard.style.display = "none"; noTemplate.style.display = ""; return; }
+    loadFields(id, select.options[select.selectedIndex].text);
+  });
+
+  // Auto-load on edit
+  if (select.value) {
+    loadFields(select.value, select.options[select.selectedIndex].text);
+  }
+
+  function showToast(msg, type = "success") {
+    const id = "t" + Date.now();
+    document.getElementById("toast-container").insertAdjacentHTML("beforeend",
+      `<div id="${id}" class="toast align-items-center text-bg-${type} border-0 show" role="alert">
+        <div class="d-flex"><div class="toast-body fw-semibold">${msg}</div>
+        <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`);
+    setTimeout(() => document.getElementById(id)?.remove(), 4000);
+  }
+
+  saveBtn.addEventListener("click", async () => {
+    const formTemplateId = select.value;
+    if (!formTemplateId) { showToast("Select a form template.", "warning"); return; }
+
+    const values = {};
+    container.querySelectorAll("[data-field-id]").forEach(el => {
+      const id = el.dataset.fieldId;
+      values[id] = el.type === "checkbox" ? String(el.checked) : el.value;
+    });
+
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving…';
+
+    try {
+      const res = await axios.post("{% url 'employees:save' %}", {
+        id: EMPLOYEE_ID,
+        form_template: formTemplateId,
+        values,
+      }, { headers: { "X-CSRFToken": getCsrf() } });
+      showToast(res.data.message, "success");
+      setTimeout(() => window.location.href = "{% url 'employees:list' %}", 1200);
+    } catch (e) {
+      showToast(e.response?.data?.error ?? "Save failed.", "danger");
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<i class="bi bi-save me-2"></i>Save Employee';
+    }
+  });
+</script>
+{% endblock %}
+{% endblock %}

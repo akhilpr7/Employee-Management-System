@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Register{% endblock %}
+{% block content %}
+<div class="row justify-content-center mt-4">
+  <div class="col-sm-10 col-md-7 col-lg-5">
+    <div class="card shadow-sm border-0">
+      <div class="card-body p-4">
+        <div class="text-center mb-4">
+          <i class="bi bi-person-plus-fill text-primary" style="font-size:2.5rem"></i>
+          <h4 class="mt-2 fw-bold">Create Account</h4>
+        </div>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="row g-3">
+            {% for field in form %}
+              <div class="{% if field.html_name in 'first_name,last_name' %}col-6{% else %}col-12{% endif %}">
+                <label class="form-label fw-semibold">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                  <div class="text-danger small mt-1">{{ field.errors.0 }}</div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger mt-3">{{ form.non_field_errors.0 }}</div>
+          {% endif %}
+          <button class="btn btn-primary w-100 py-2 fw-semibold mt-4" type="submit">
+            <i class="bi bi-person-check me-2"></i>Create Account
+          </button>
+        </form>
+        <hr/>
+        <p class="text-center text-muted small mb-0">
+          Already have an account? <a href="{% url 'accounts:login' %}">Sign In</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

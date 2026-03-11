@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}{% if form_obj %}Edit Form{% else %}Create Form{% endif %}{% endblock %}
+{% block nav_forms %}active{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="d-flex align-items-center mb-4">
+      <h3 class="fw-bold mb-0">
+        <i class="bi bi-layout-text-window me-2 text-primary"></i>
+        {% if form_obj %}Edit: {{ form_obj.name }}{% else %}New Form Template{% endif %}
+      </h3>
+      <a href="{% url 'employees:form_list' %}" class="btn btn-outline-secondary btn-sm ms-auto">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-3">
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Form Name <span class="text-danger">*</span></label>
+            <input type="text" id="formName" class="form-control" placeholder="e.g. Software Engineer Profile"
+                   value="{{ form_obj.name|default:'' }}"/>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Description</label>
+            <input type="text" id="formDesc" class="form-control" placeholder="Optional description"
+                   value="{{ form_obj.description|default:'' }}"/>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-white d-flex align-items-center py-3">
+        <span class="fw-semibold"><i class="bi bi-list-ul me-2"></i>Fields</span>
+        <button id="addFieldBtn" class="btn btn-primary btn-sm ms-auto">
+          <i class="bi bi-plus-lg me-1"></i>Add Field
+        </button>
+      </div>
+      <div class="card-body">
+        <div id="fieldList" class="d-flex flex-column gap-2"></div>
+        <div id="emptyState" class="text-center text-muted py-5">
+          <i class="bi bi-inbox" style="font-size:2rem"></i>
+          <p class="mt-2">No fields yet. Click <strong>Add Field</strong> to start.</p>
+        </div>
+      </div>
+      <div class="card-footer bg-white d-flex justify-content-end gap-2">
+        <a href="{% url 'employees:form_list' %}" class="btn btn-outline-secondary">Cancel</a>
+        <button id="saveFormBtn" class="btn btn-success px-4">
+          <i class="bi bi-save me-2"></i>Save Form
+        </button>
+      </div>
+    </div>
+
+    <div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index:9999"></div>
+  </div>
+</div>
+
+<template id="fieldRowTpl">
+  <div class="field-row card border bg-white shadow-none" data-id="">
+    <div class="card-body py-2 px-3">
+      <div class="row g-2 align-items-center">
+        <div class="col-auto drag-handle text-muted" title="Drag to reorder" style="cursor:grab">
+          <i class="bi bi-grip-vertical fs-5"></i>
+        </div>
+        <div class="col">
+          <input type="text" class="form-control form-control-sm field-label" placeholder="Field label (e.g. Full Name)"/>
+        </div>
+        <div class="col-auto">
+          <select class="form-select form-select-sm field-type">
+            <option value="text">Text</option>
+            <option value="number">Number</option>
+            <option value="email">Email</option>
+            <option value="date">Date</option>
+            <option value="password">Password</option>
+            <option value="textarea">Textarea</option>
+            <option value="tel">Phone</option>
+            <option value="url">URL</option>
+            <option value="select">Select (dropdown)</option>
+            <option value="checkbox">Checkbox</option>
+          </select>
+        </div>
+        <div class="col-auto">
+          <div class="form-check form-switch mb-0" title="Required field">
+            <input class="form-check-input field-required" type="checkbox"/>
+            <label class="form-check-label small text-muted">Req.</label>
+          </div>
+        </div>
+        <div class="col-auto">
+          <button class="btn btn-outline-danger btn-sm remove-field" title="Remove field">
+            <i class="bi bi-trash3"></i>
+          </button>
+        </div>
+      </div>
+      <div class="options-row mt-2 d-none">
+        <label class="form-label small text-muted mb-1">Options (comma-separated)</label>
+        <input type="text" class="form-control form-control-sm field-options" placeholder="e.g. Full-time, Part-time, Contract"/>
+      </div>
+    </div>
+  </div>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const FORM_ID = {{ form_obj.pk|default:"null" }};
+  const INITIAL_FIELDS = [
+    {% if form_obj %}
+      {% for field in form_obj.fields.all %}
+        {
+          id: {{ field.pk }},
+          label: "{{ field.label|escapejs }}",
+          field_type: "{{ field.field_type }}",
+          is_required: {{ field.is_required|yesno:"true,false" }},
+          options: {{ field.options|safe }},
+          order: {{ field.order }}
+        },
+      {% endfor %}
+    {% endif %}
+  ];
+
+  const fieldList   = document.getElementById("fieldList");
+  const emptyState  = document.getElementById("emptyState");
+  const tpl         = document.getElementById("fieldRowTpl");
+  const saveBtn     = document.getElementById("saveFormBtn");
+  const addBtn      = document.getElementById("addFieldBtn");
+
+  // Sortable is loaded before this block in base.html
+  Sortable.create(fieldList, {
+    handle: ".drag-handle",
+    animation: 150,
+    ghostClass: "bg-light",
+  });
+
+  function checkEmpty() {
+    emptyState.style.display = fieldList.children.length ? "none" : "block";
+  }
+
+  function addField(data = {}) {
+    const clone      = tpl.content.cloneNode(true);
+    const row        = clone.querySelector(".field-row");
+    const labelInput = clone.querySelector(".field-label");
+    const typeSelect = clone.querySelector(".field-type");
+    const reqCheck   = clone.querySelector(".field-required");
+    const optionsRow = clone.querySelector(".options-row");
+    const optionsInput = clone.querySelector(".field-options");
+
+    if (data.id)          row.dataset.id    = data.id;
+    if (data.label)       labelInput.value  = data.label;
+    if (data.field_type)  typeSelect.value  = data.field_type;
+    if (data.is_required) reqCheck.checked  = true;
+    if (data.options?.length) optionsInput.value = data.options.join(", ");
+    if (data.field_type === "select") optionsRow.classList.remove("d-none");
+
+    typeSelect.addEventListener("change", () => {
+      optionsRow.classList.toggle("d-none", typeSelect.value !== "select");
+    });
+
+    clone.querySelector(".remove-field").addEventListener("click", () => {
+      row.remove();
+      checkEmpty();
+    });
+
+    fieldList.appendChild(clone);
+    checkEmpty();
+    labelInput.focus();
+  }
+
+  function showToast(msg, type = "success") {
+    const id = "t" + Date.now();
+    document.getElementById("toast-container").insertAdjacentHTML("beforeend",
+      `<div id="${id}" class="toast align-items-center text-bg-${type} border-0 show" role="alert">
+        <div class="d-flex">
+          <div class="toast-body fw-semibold">${msg}</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      </div>`
+    );
+    setTimeout(() => document.getElementById(id)?.remove(), 4000);
+  }
+
+  addBtn.addEventListener("click", () => addField());
+
+  saveBtn.addEventListener("click", async () => {
+    const name = document.getElementById("formName").value.trim();
+    if (!name) { showToast("Form name is required.", "danger"); return; }
+
+    const rows = [...fieldList.querySelectorAll(".field-row")];
+    if (!rows.length) { showToast("Add at least one field.", "warning"); return; }
+
+    const fields = rows.map((row, idx) => ({
+      id: row.dataset.id || undefined,
+      label: row.querySelector(".field-label").value.trim() || `Field ${idx + 1}`,
+      field_type: row.querySelector(".field-type").value,
+      is_required: row.querySelector(".field-required").checked,
+      order: idx,
+      options: row.querySelector(".field-type").value === "select"
+        ? row.querySelector(".field-options").value.split(",").map(s => s.trim()).filter(Boolean)
+        : [],
+    }));
+
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving…';
+
+    try {
+      const res = await axios.post("{% url 'employees:form_save' %}", {
+        id: FORM_ID,
+        name,
+        description: document.getElementById("formDesc").value.trim(),
+        fields,
+      }, { headers: { "X-CSRFToken": getCsrf() } });
+
+      showToast(res.data.message, "success");
+      setTimeout(() => window.location.href = "{% url 'employees:form_list' %}", 1200);
+    } catch (err) {
+      showToast(err.response?.data?.error ?? "Save failed. Try again.", "danger");
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<i class="bi bi-save me-2"></i>Save Form';
+    }
+  });
+
+  INITIAL_FIELDS.forEach(addField);
+  checkEmpty();
+</script>
+{% endblock %}

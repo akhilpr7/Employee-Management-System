@@ -1,0 +1,64 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name : postgres
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${DB_NAME:-emp_mgmt}
+      POSTGRES_USER: ${DB_USER:-emp_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-emp_pass}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-emp_user} -d ${DB_NAME:-emp_mgmt}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  django:
+    build: .
+    container_name : django
+    restart: always
+    command: >
+      sh -c "python manage.py makemigrations accounts --settings=core.settings.development &&
+             python manage.py makemigrations employees --settings=core.settings.development &&
+             python manage.py migrate --settings=core.settings.development &&
+             python manage.py collectstatic --noinput --settings=core.settings.development &&
+             gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 3 --reload"
+    volumes:
+      - .:/app
+      - media_volume:/app/media
+    tty: true
+    stdin_open: true
+    environment:
+      - DJANGO_SETTINGS_MODULE=core.settings.development
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-dev-key-change-in-prod}
+      - DEBUG=${DEBUG:-True}
+      - DB_NAME=${DB_NAME:-emp_mgmt}
+      - DB_USER=${DB_USER:-emp_user}
+      - DB_PASSWORD=${DB_PASSWORD:-emp_pass}
+      - DB_HOST=db
+      - DB_PORT=5432
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  adminer:
+    image: adminer:latest
+    container_name : adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  media_volume:

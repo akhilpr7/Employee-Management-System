@@ -1,0 +1,247 @@
+{
+  "info": {
+    "name": "Employee Management System",
+    "_postman_id": "emp-mgmt-api",
+    "description": "REST API for the Employee Management System (Django + JWT)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000", "type": "string" },
+    { "key": "access_token", "value": "", "type": "string" },
+    { "key": "refresh_token", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/auth/register/", "host": ["{{base_url}}"], "path": ["api","auth","register",""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"john_doe\",\n  \"email\": \"john@example.com\",\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"password\": \"SecurePass@123\",\n  \"password2\": \"SecurePass@123\"\n}"
+            }
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const r = pm.response.json();",
+            "if (r.access) pm.collectionVariables.set('access_token', r.access);",
+            "if (r.refresh) pm.collectionVariables.set('refresh_token', r.refresh);"
+          ] } }]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/auth/login/", "host": ["{{base_url}}"], "path": ["api","auth","login",""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"SecurePass@123\"\n}"
+            }
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const r = pm.response.json();",
+            "if (r.access) pm.collectionVariables.set('access_token', r.access);",
+            "if (r.refresh) pm.collectionVariables.set('refresh_token', r.refresh);"
+          ] } }]
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/auth/token/refresh/", "host": ["{{base_url}}"], "path": ["api","auth","token","refresh",""] },
+            "body": { "mode": "raw", "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}" }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/api/auth/profile/", "host": ["{{base_url}}"], "path": ["api","auth","profile",""] }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/auth/profile/", "host": ["{{base_url}}"], "path": ["api","auth","profile",""] },
+            "body": { "mode": "raw", "raw": "{\n  \"first_name\": \"Johnathan\",\n  \"phone\": \"+919876543210\",\n  \"department\": \"Engineering\"\n}" }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/auth/change-password/", "host": ["{{base_url}}"], "path": ["api","auth","change-password",""] },
+            "body": { "mode": "raw", "raw": "{\n  \"old_password\": \"SecurePass@123\",\n  \"new_password\": \"NewPass@456\",\n  \"new_password2\": \"NewPass@456\"\n}" }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/auth/logout/", "host": ["{{base_url}}"], "path": ["api","auth","logout",""] },
+            "body": { "mode": "raw", "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Form Templates",
+      "item": [
+        {
+          "name": "List Forms",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/api/forms/", "host": ["{{base_url}}"], "path": ["api","forms",""] }
+          }
+        },
+        {
+          "name": "Create Form",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/forms/", "host": ["{{base_url}}"], "path": ["api","forms",""] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Software Engineer\",\n  \"description\": \"Profile form for SWEs\",\n  \"fields\": [\n    {\"label\": \"Full Name\", \"field_type\": \"text\", \"is_required\": true, \"order\": 0},\n    {\"label\": \"Email\", \"field_type\": \"email\", \"is_required\": true, \"order\": 1},\n    {\"label\": \"Date of Joining\", \"field_type\": \"date\", \"is_required\": false, \"order\": 2},\n    {\"label\": \"Department\", \"field_type\": \"select\", \"is_required\": true, \"order\": 3, \"options\": [\"Backend\", \"Frontend\", \"DevOps\", \"QA\"]}\n  ]\n}" }
+          }
+        },
+        {
+          "name": "Get Form",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/api/forms/1/", "host": ["{{base_url}}"], "path": ["api","forms","1",""] }
+          }
+        },
+        {
+          "name": "Update Form",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/forms/1/", "host": ["{{base_url}}"], "path": ["api","forms","1",""] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Senior Software Engineer\",\n  \"description\": \"Updated profile\",\n  \"fields\": [\n    {\"label\": \"Full Name\", \"field_type\": \"text\", \"is_required\": true, \"order\": 0},\n    {\"label\": \"Email\", \"field_type\": \"email\", \"is_required\": true, \"order\": 1},\n    {\"label\": \"Experience (years)\", \"field_type\": \"number\", \"is_required\": true, \"order\": 2}\n  ]\n}" }
+          }
+        },
+        {
+          "name": "Delete Form",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/api/forms/1/", "host": ["{{base_url}}"], "path": ["api","forms","1",""] }
+          }
+        },
+        {
+          "name": "Get Form Fields",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/api/forms/1/fields/", "host": ["{{base_url}}"], "path": ["api","forms","1","fields",""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Employees",
+      "item": [
+        {
+          "name": "List Employees",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/api/employees/", "host": ["{{base_url}}"], "path": ["api","employees",""] }
+          }
+        },
+        {
+          "name": "Search Employees",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/employees/?search=john",
+              "host": ["{{base_url}}"],
+              "path": ["api","employees",""],
+              "query": [{ "key": "search", "value": "john" }]
+            }
+          }
+        },
+        {
+          "name": "Filter by Form Template",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/employees/?form_template=1",
+              "host": ["{{base_url}}"],
+              "path": ["api","employees",""],
+              "query": [{ "key": "form_template", "value": "1" }]
+            }
+          }
+        },
+        {
+          "name": "Create Employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/employees/", "host": ["{{base_url}}"], "path": ["api","employees",""] },
+            "body": { "mode": "raw", "raw": "{\n  \"form_template\": 1,\n  \"values\": {\n    \"1\": \"Akhil Kumar\",\n    \"2\": \"akhil@example.com\",\n    \"3\": \"2024-01-15\",\n    \"4\": \"Backend\"\n  }\n}" }
+          }
+        },
+        {
+          "name": "Get Employee",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/api/employees/1/", "host": ["{{base_url}}"], "path": ["api","employees","1",""] }
+          }
+        },
+        {
+          "name": "Update Employee",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/api/employees/1/", "host": ["{{base_url}}"], "path": ["api","employees","1",""] },
+            "body": { "mode": "raw", "raw": "{\n  \"values\": {\n    \"1\": \"Akhil R Kumar\",\n    \"4\": \"DevOps\"\n  }\n}" }
+          }
+        },
+        {
+          "name": "Delete Employee",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/api/employees/1/", "host": ["{{base_url}}"], "path": ["api","employees","1",""] }
+          }
+        }
+      ]
+    }
+  ]
+}

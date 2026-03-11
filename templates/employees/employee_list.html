@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Employees{% endblock %}
+{% block nav_employees %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+  <h3 class="fw-bold mb-0"><i class="bi bi-people me-2 text-primary"></i>Employees</h3>
+  <a href="{% url 'employees:create' %}" class="btn btn-primary ms-auto">
+    <i class="bi bi-person-plus me-1"></i>Add Employee
+  </a>
+</div>
+
+<!-- Search & Filter -->
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-5">
+        <label class="form-label small fw-semibold mb-1">Search</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+          <input type="text" name="q" class="form-control" placeholder="Search field values…" value="{{ search }}"/>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label small fw-semibold mb-1">Filter by Form</label>
+        <select name="form_template" class="form-select">
+          <option value="">All Templates</option>
+          {% for f in forms %}
+            <option value="{{ f.pk }}" {% if selected_form == f.pk|stringformat:"s" %}selected{% endif %}>{{ f.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-funnel me-1"></i>Filter</button>
+        <a href="{% url 'employees:list' %}" class="btn btn-outline-secondary ms-1">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if employees %}
+<div class="card shadow-sm border-0">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>Employee</th>
+          <th>Form Template</th>
+          <th>Fields</th>
+          <th>Created</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for emp in employees %}
+        <tr>
+          <td class="text-muted small">{{ emp.pk }}</td>
+          <td>
+            <div class="fw-semibold">{{ emp }}</div>
+            <div class="text-muted small">
+              {% with vals=emp.field_values.all %}
+                {% for fv in vals|slice:":3" %}
+                  <span class="badge bg-light text-dark border me-1">{{ fv.field.label }}: {{ fv.value|truncatechars:20 }}</span>
+                {% endfor %}
+              {% endwith %}
+            </div>
+          </td>
+          <td>
+            <span class="badge bg-primary-subtle text-primary rounded-pill">{{ emp.form_template.name }}</span>
+          </td>
+          <td>{{ emp.field_values.count }}</td>
+          <td class="text-muted small">{{ emp.created_at|date:"M d, Y" }}</td>
+          <td class="text-end">
+            <a href="{% url 'employees:edit' emp.pk %}" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <button class="btn btn-outline-danger btn-sm ms-1" onclick="deleteEmployee({{ emp.pk }})">
+              <i class="bi bi-trash3"></i>
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="text-center text-muted py-5">
+  <i class="bi bi-people" style="font-size:3rem"></i>
+  <p class="mt-3">No employees found.</p>
+  {% if not search and not selected_form %}
+    <a href="{% url 'employees:create' %}" class="btn btn-primary mt-2">
+      <i class="bi bi-person-plus me-1"></i>Add your first employee
+    </a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% block extra_js %}
+<script>
+
+  async function deleteEmployee(id) {
+    if (!confirm("Delete this employee record? This cannot be undone.")) return;
+    try {
+      await axios.post(`/employees/${id}/delete/`, {}, { headers: { "X-CSRFToken": getCsrf() } });
+      location.reload();
+    } catch (e) {
+      alert("Delete failed: " + (e.response?.data?.error ?? e.message));
+    }
+  }
+</script>
+{% endblock %}
+{% endblock %}
