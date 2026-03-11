@@ -27,10 +27,8 @@ A full-stack Django application with REST API for managing employees via dynamic
 ### 1. Clone and configure
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/akhilpr7/Employee-Management-System.git
 cd emp_mgmt
-cp .env.example .env
-# Edit .env if needed (defaults work for local dev)
 ```
 
 ### 2. Build and start
@@ -49,11 +47,11 @@ docker-compose exec django python manage.py createsuperuser --settings=core.sett
 
 | URL | Description |
 |-----|-------------|
-| http://localhost/accounts/login/ | Web login |
-| http://localhost/employees/ | Employee list |
-| http://localhost/employees/forms/ | Form builder |
-| http://localhost/admin/ | Django admin |
-| http://localhost/api/ | DRF browsable API |
+| http://localhost:8000/accounts/login/ | Web login |
+| http://localhost:8000/employees/ | Employee list |
+| http://localhost:8000/employees/forms/ | Form builder |
+| http://localhost:8000/admin/ | Django admin |
+| http://localhost:8000/api/ | DRF browsable API |
 
 ---
 
